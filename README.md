@@ -1,4 +1,4 @@
-# Circle Screen Visuals
+# Upward Spiral Visuals
 
 VJ visuals made for a DJ set projected onto a round screen, so almost everything is square (1:1) and composed around the center. Most clips are seamless loops that you can trigger and leave running in Resolume.
 
@@ -59,4 +59,4 @@ Black ferrofluid spiking on a magnet, as a 4-second exact loop with 4 kicks, ren
 
 ## License
 
-Remix and use freely. The media is **CC BY 4.0**: use it anywhere, including paid gigs, with credit to "Circle Screen Visuals by Dylan Moore". The code is **MIT**. See `LICENSE.md` for the details.
+Remix and use freely. The media is **CC BY 4.0**: use it anywhere, including paid gigs, with credit to "Upward Spiral Visuals by Dylan Moore". The code is **MIT**. See `LICENSE.md` for the details.

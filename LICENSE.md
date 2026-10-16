@@ -4,7 +4,7 @@
 
 The video clips, stills, keyframes, contact sheets, preview images and the Blender scene file (`clips/`, `stills/`, `blender/**/*.blend`, `blender/**/renders/`, `shaders/**/previews/`, `shaders/**/contact-sheet.jpg`) are licensed under the **Creative Commons Attribution 4.0 International License** (CC BY 4.0).
 
-You may share, remix, adapt and use them for any purpose, including commercial use such as paid VJ sets, as long as you give credit: "Circle Screen Visuals by Dylan Moore".
+You may share, remix, adapt and use them for any purpose, including commercial use such as paid VJ sets, as long as you give credit: "Upward Spiral Visuals by Dylan Moore".
 
 Full license: https://creativecommons.org/licenses/by/4.0/legalcode
 
