@@ -56,3 +56,7 @@ Black ferrofluid spiking on a magnet, as a 4-second exact loop with 4 kicks, ren
 - **Molecular look:** inspired by Drew Berry's molecular animations for WEHI. No WEHI footage is included.
 - **Galaxy layouts:** based on Hubble photographs (ESA/Hubble and NASA). The photos themselves aren't included.
 - **Tools:** clips were generated with Seedance 2.0 and Qwen Image 3 via Higgsfield, and upscaled with Topaz Video. Shaders and the Blender scene were written by hand with Claude.
+
+## License
+
+Remix and use freely. The media is **CC BY 4.0**: use it anywhere, including paid gigs, with credit to "Circle Screen Visuals by Dylan Moore". The code is **MIT**. See `LICENSE.md` for the details.
