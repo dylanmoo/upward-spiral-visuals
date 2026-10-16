@@ -1,0 +1,407 @@
+<title>Optics Bench</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Michroma&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a lab bench. The circular "screen" on the left is the hero; a quiet instrument panel on the right. Single dark theme by choice (it previews a projector in a dark room). */
+:root {
+  --bg: #0a0b0d;
+  --panel: #111317;
+  --line: #24272d;
+  --fg: #e7e4dd;
+  --muted: #8b9099;
+  --accent: #e9b35f;
+  --accent-ink: #1a1408;
+  --display: "Michroma", "Eurostile", "Arial Black", sans-serif;
+  --body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+html, body { height: auto; }
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-block: 20px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 20px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; border-bottom: 1px solid var(--line); padding-bottom: 14px; }
+h1 { font-family: var(--display); font-weight: 400; font-size: clamp(18px, 2.4vw, 24px); letter-spacing: 0.08em; margin: 0; text-transform: uppercase; }
+.sub { color: var(--muted); margin: 0; font-size: 13px; max-width: 62ch; }
+.bench { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 24px; align-items: start; }
+@media (max-width: 900px) { .bench { grid-template-columns: minmax(0, 1fr); } }
+.stage { display: grid; gap: 12px; justify-items: center; min-width: 0; }
+.screen { position: relative; width: min(100%, 72vh, 760px); aspect-ratio: 1; max-width: 100%; background: #000; border-radius: 50%; overflow: hidden; box-shadow: 0 0 0 1px var(--line), 0 30px 80px rgba(0,0,0,0.6); }
+.screen.square { border-radius: 4px; }
+canvas { width: 100%; height: 100%; display: block; }
+.readout { font-family: var(--mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+.readout b { color: var(--fg); font-weight: 500; }
+.err { color: #ff8a7a; font-family: var(--mono); font-size: 12px; white-space: pre-wrap; max-width: 100%; overflow-x: auto; }
+.panel { display: grid; gap: 18px; min-width: 0; }
+.list { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.list button { width: 100%; display: grid; grid-template-columns: 30px 1fr; gap: 2px 10px; text-align: left; background: transparent; color: var(--fg); border: 1px solid transparent; border-radius: 6px; padding: 8px 10px; cursor: pointer; font: inherit; }
+.list button:hover { background: var(--panel); }
+.list button[aria-pressed="true"] { background: var(--panel); border-color: var(--line); }
+.list .num { grid-row: span 2; font-family: var(--mono); font-size: 12px; color: var(--muted); padding-top: 2px; }
+.list button[aria-pressed="true"] .num { color: var(--accent); }
+.list .name { font-weight: 500; }
+.list .note { color: var(--muted); font-size: 12.5px; line-height: 1.4; }
+.controls { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; display: grid; gap: 12px; }
+.ctl { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; }
+.ctl label { font-size: 13px; }
+.ctl output { font-family: var(--mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.ctl input[type=range] { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn { font: inherit; font-size: 13px; background: transparent; color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 7px 12px; cursor: pointer; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn:focus-visible, .list button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.eyebrow { font-family: var(--display); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+pre.settings { margin: 0; font-family: var(--mono); font-size: 11.5px; color: var(--muted); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 10px; overflow-x: auto; white-space: pre; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Optics Bench</h1>
+    <p class="sub">Eight looping material shaders, previewed on a circular screen. Each loop is exact: the last frame flows into the first at any loop length.</p>
+  </header>
+  <div class="bench">
+    <div class="stage">
+      <div class="screen" id="screen"><canvas id="gl" aria-label="Shader preview"></canvas></div>
+      <div class="readout" id="readout"></div>
+      <div class="err" id="err" hidden></div>
+    </div>
+    <div class="panel">
+      <div>
+        <p class="eyebrow">Shaders (numbered as in our idea list)</p>
+        <ul class="list" id="list"></ul>
+      </div>
+      <div class="controls" id="controls"></div>
+      <div class="row">
+        <button class="btn" id="pause" type="button">Pause</button>
+        <button class="btn" id="mask" type="button">Show square</button>
+        <button class="btn" id="full" type="button">Fullscreen</button>
+      </div>
+      <div>
+        <p class="eyebrow">Settings to send back for final renders</p>
+        <pre class="settings" id="settings"></pre>
+        <div class="row" style="margin-top:8px"><button class="btn primary" id="copy" type="button">Copy settings</button><span class="readout" id="copied" hidden>Copied</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+const HEADER = `
+precision highp float;
+uniform vec2 uRes; uniform float uPhase; uniform float uA; uniform float uB; uniform float uC; uniform float uHue; uniform float uMask;
+#define TAU 6.28318530718
+#define PI 3.14159265359
+float hash12(vec2 p){ vec3 p3=fract(vec3(p.xyx)*.1031); p3+=dot(p3,p3.yzx+33.33); return fract((p3.x+p3.y)*p3.z); }
+float hash13(vec3 p3){ p3=fract(p3*.1031); p3+=dot(p3,p3.zyx+31.32); return fract((p3.x+p3.y)*p3.z); }
+float noise3(vec3 p){ vec3 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
+  return mix(mix(mix(hash13(i),hash13(i+vec3(1,0,0)),f.x),mix(hash13(i+vec3(0,1,0)),hash13(i+vec3(1,1,0)),f.x),f.y),
+             mix(mix(hash13(i+vec3(0,0,1)),hash13(i+vec3(1,0,1)),f.x),mix(hash13(i+vec3(0,1,1)),hash13(i+vec3(1,1,1)),f.x),f.y),f.z); }
+float fbm3(vec3 p){ float s=0., a=.5; for(int i=0;i<5;i++){ s+=a*noise3(p); p=p*2.03+vec3(1.7,9.2,3.1); a*=.5; } return s; }
+// noise periodic in y with integer period P (lattice units)
+float noiseP(vec3 p, float P){ vec3 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
+  float y0=mod(i.y,P), y1=mod(i.y+1.,P);
+  vec3 a=vec3(i.x,y0,i.z), b=vec3(i.x,y1,i.z);
+  return mix(mix(mix(hash13(a),hash13(a+vec3(1,0,0)),f.x),mix(hash13(b),hash13(b+vec3(1,0,0)),f.x),f.y),
+             mix(mix(hash13(a+vec3(0,0,1)),hash13(a+vec3(1,0,1)),f.x),mix(hash13(b+vec3(0,0,1)),hash13(b+vec3(1,0,1)),f.x),f.y),f.z); }
+float fbmP(vec3 p, float P){ float s=0., a=.5; for(int i=0;i<4;i++){ s+=a*noiseP(p,P); p*=2.; P*=2.; a*=.45; } return s; }
+vec3 loopOff(float r){ float a=uPhase*TAU; return r*vec3(cos(a), 0.4*sin(a), sin(a)); }
+vec2 rot(vec2 p, float a){ float c=cos(a), s=sin(a); return vec2(c*p.x-s*p.y, s*p.x+c*p.y); }
+vec3 hueShift(vec3 c, float h){ const vec3 k=vec3(0.57735); float ca=cos(h*TAU); return c*ca+cross(k,c)*sin(h*TAU)+k*dot(k,c)*(1.-ca); }
+vec3 blackbody(float t){ t/=100.; float r,g,b;
+  r = t<=66. ? 1. : clamp(1.29293618606*pow(t-60.,-0.1332047592),0.,1.);
+  g = t<=66. ? clamp(0.390081578769*log(t)-0.631841443788,0.,1.) : clamp(1.12989086089*pow(t-60.,-0.0755148492),0.,1.);
+  b = t>=66. ? 1. : (t<=19. ? 0. : clamp(0.543206789110*log(t-10.)-1.19625408914,0.,1.));
+  return vec3(r,g,b); }
+vec2 screenUV(){ return (gl_FragCoord.xy-0.5*uRes)/(0.5*min(uRes.x,uRes.y)); }
+vec4 finish(vec3 col, vec2 uv){ col=max(col,0.); col=1.-exp(-col*1.15); col=pow(col,vec3(0.92));
+  float r=length(uv); if(uMask>0.5) col*=smoothstep(1.0,0.992,r); return vec4(col,1.); }
+`;
+
+const SHADERS = [
+{ id: "lens", num: "1", name: "Crystal lens", note: "The screen as a glass sphere: inverted, magnified, split into color at the rim.",
+  params: { A: ["Refraction", 0.7], B: ["Lens size", 0.92], C: ["Dispersion", 0.5] }, loop: 16, hue: 0,
+  src: `
+vec3 pal(float h){ vec3 c = h<.25? vec3(1.,.72,.38) : h<.5? vec3(.35,.8,1.) : h<.75? vec3(1.,.35,.6) : vec3(.95,.95,.9); return hueShift(c,uHue); }
+vec3 scene(vec2 q){
+  float sp=.28; float x=q.x/sp+uPhase*4.; float id=floor(x); float fx=fract(x)-.5;
+  vec3 col=pal(hash12(vec2(id,3.)))*exp(-fx*fx*70.)*(.45+.55*sin(q.y*2.3+id*1.7+uPhase*TAU))*1.4;
+  vec2 g=q*5.+vec2(0.,uPhase*10.); vec2 gi=floor(g), gf=fract(g)-.5; float h=hash12(gi+7.);
+  vec2 o=vec2(hash12(gi+1.),hash12(gi+2.))-.5; col+=pal(h)*smoothstep(.18,.0,length(gf-o*.6))*step(.72,h)*1.6;
+  col+=vec3(.02,.025,.04)*(1.-q.y*.3);
+  return col; }
+void main(){ vec2 uv=screenUV(); float R=mix(.45,1.,uB); float r=length(uv);
+  vec3 col;
+  if(r<R){ float z=sqrt(max(1.-(r/R)*(r/R),0.)); vec3 n=vec3(uv/R,z);
+    float k=mix(.25,1.,uA); float d=uC*.12;
+    vec2 base=-uv*k/(z*.65+.35);
+    col=vec3(scene(base*(1.-d)).r, scene(base).g, scene(base*(1.+d)).b);
+    float F=.04+.96*pow(1.-z,5.);
+    vec3 refl=vec3(.55,.6,.7)*smoothstep(.2,1.,n.y*.5+.5)*.35;
+    col=mix(col,refl,F*.8);
+    col+=vec3(1.)*pow(max(dot(normalize(n),normalize(vec3(-.4,.5,.75))),0.),120.)*1.4;
+    col*=smoothstep(1.,.965,r/R)*.85+.15;
+  } else { col=scene(uv)*.55; }
+  gl_FragColor=finish(col,uv); }`},
+{ id: "reed", num: "3", name: "Reeded glass", note: "Fluted glass sliding across orbiting lights, each reed carrying its own flipped slice.",
+  params: { A: ["Refraction", 0.8], B: ["Reed width", 0.35], C: ["Dispersion", 0.45] }, loop: 12, hue: 0,
+  src: `
+vec3 lights(vec2 q){ vec3 col=vec3(.01,.012,.02);
+  for(int i=0;i<5;i++){ float fi=float(i); float dir=mod(fi,2.)<.5?1.:-1.;
+    float a=TAU*(uPhase*dir+fi*.21); vec2 pos=vec2(cos(a),sin(a))*(.18+.14*fi);
+    vec3 c=hueShift(fi<1.?vec3(1.,.85,.6):fi<2.?vec3(.3,.7,1.):fi<3.?vec3(1.,.4,.25):fi<4.?vec3(.7,.4,1.):vec3(.9,1.,.95),uHue);
+    col+=c*exp(-dot(q-pos,q-pos)*(10.+fi*6.))*(1.1-fi*.12); }
+  col+=vec3(1.,.9,.75)*exp(-dot(q,q)*40.)*.8;
+  return col; }
+void main(){ vec2 uv=screenUV(); float w=mix(.035,.2,uB);
+  float x=uv.x/w+uPhase*2.; float id=floor(x); float f=fract(x)*2.-1.;
+  float cx=(id+.5-uPhase*2.)*w; float d=uC*.18;
+  float k=mix(.5,5.,uA);
+  vec3 col;
+  col.r=lights(vec2(mix(uv.x,cx-f*w*k*(1.-d),uA),uv.y)).r;
+  col.g=lights(vec2(mix(uv.x,cx-f*w*k,uA),uv.y)).g;
+  col.b=lights(vec2(mix(uv.x,cx-f*w*k*(1.+d),uA),uv.y)).b;
+  col*=.35+.65*smoothstep(1.,.75,abs(f));
+  col+=vec3(.9,.95,1.)*exp(-pow((f-.55)*7.,2.))*.06;
+  gl_FragColor=finish(col*1.3,uv); }`},
+{ id: "photo", num: "5", name: "Photoelastic disc", note: "A clear disc squeezed between polarizers. The colors are real stress fringes, computed per wavelength.",
+  params: { A: ["Load", 0.6], B: ["Second load", 0.25], C: ["Fringe density", 0.45] }, loop: 20, hue: 0,
+  src: `
+void addLoad(inout vec3 s, vec2 x, vec2 P, vec2 d, float F){
+  vec2 r=x-P; float rl=max(length(r),.004); vec2 rh=r/rl; float c=max(dot(rh,d),0.);
+  float sr=-2.*F*c/(PI*rl); s+=vec3(sr*rh.x*rh.x, sr*rh.y*rh.y, sr*rh.x*rh.y); }
+void main(){ vec2 uv=screenUV(); float R=.96; float r=length(uv);
+  float th=PI*uPhase; float F=uA*(.8+.2*sin(TAU*uPhase*2.));
+  vec2 P1=R*vec2(cos(th),sin(th)); vec3 s=vec3(0.);
+  addLoad(s,uv,P1,-P1/R,F); addLoad(s,uv,-P1,P1/R,F);
+  vec2 P2=R*vec2(cos(th+PI*.5),sin(th+PI*.5)); float F2=F*uB*(.6+.4*cos(TAU*uPhase*2.));
+  addLoad(s,uv,P2,-P2/R,F2); addLoad(s,uv,-P2,P2/R,F2);
+  float diff=sqrt((s.x-s.y)*(s.x-s.y)+4.*s.z*s.z);
+  float N=min(diff*mix(.6,5.,uC),14.);
+  vec3 col=vec3(0.); vec3 wsum=vec3(0.);
+  for(int i=0;i<8;i++){ float fi=float(i); float lam=420.+fi*40.;
+    vec3 w = fi<1.?vec3(.3,0.,.6):fi<2.?vec3(.1,.1,1.):fi<3.?vec3(0.,.6,.7):fi<4.?vec3(.2,1.,.1):fi<5.?vec3(.8,.9,0.):fi<6.?vec3(1.,.4,0.):fi<7.?vec3(.8,.05,0.):vec3(.4,0.,0.);
+    float I=pow(sin(PI*N*560./lam),2.); col+=w*I; wsum+=w; }
+  col/=wsum; col=hueShift(col,uHue);
+  col*=smoothstep(R,R-.01,r);
+  col+=vec3(.25,.28,.32)*exp(-pow((r-R)*90.,2.));
+  gl_FragColor=finish(col*1.5,uv); }`},
+{ id: "ferro", num: "7", name: "Ferrofluid", note: "Black liquid metal spiking on a magnet. Spikes pulse on a 4-beat kick across each loop.",
+  params: { A: ["Spike height", 0.75], B: ["Spike density", 0.45], C: ["Kicks per loop", 0.25] }, loop: 8, hue: 0,
+  src: `
+vec4 hexC(vec2 p){ vec2 s=vec2(1.,1.7320508); vec4 hC=floor(vec4(p,p-vec2(.5,1.))/s.xyxy)+.5;
+  vec4 h=vec4(p-hC.xy*s, p-(hC.zw+.5)*s); return dot(h.xy,h.xy)<dot(h.zw,h.zw)?vec4(h.xy,hC.xy):vec4(h.zw,hC.zw+.5); }
+float kicks(){ float n=floor(mix(1.,8.99,uC)); return exp(-fract(uPhase*n)*5.); }
+float height(vec2 p){ float r=length(p);
+  vec2 q=rot(p, TAU*uPhase/6.)*mix(5.,13.,uB);
+  vec4 h=hexC(q); float d=length(h.xy);
+  float amp=uA*(.35+.65*kicks())*smoothstep(.95,.05,r);
+  float spike=amp*pow(max(1.-d/.48,0.),1.15)*.75/mix(5.,13.,uB)*8.;
+  float pool=smoothstep(1.,.15,r)*.08;
+  return pool+spike; }
+vec3 env(vec3 d){ vec3 c=vec3(.01)+vec3(.04,.045,.05)*max(d.y,0.);
+  c+=hueShift(vec3(1.,.97,.92),uHue)*smoothstep(.75,.95,dot(d,normalize(vec3(-.5,.55,.65))))*2.5;
+  c+=hueShift(vec3(.6,.75,1.),uHue)*smoothstep(.85,.97,dot(d,normalize(vec3(.6,-.3,.75))))*1.2;
+  c+=vec3(.9)*smoothstep(.04,0.,abs(d.y-.2))*smoothstep(.2,.9,d.z)*.25;
+  return c; }
+void main(){ vec2 uv=screenUV(); float e=.0025;
+  float hx=(height(uv+vec2(e,0.))-height(uv-vec2(e,0.)))/(2.*e);
+  float hy=(height(uv+vec2(0.,e))-height(uv-vec2(0.,e)))/(2.*e);
+  vec3 n=normalize(vec3(-hx,-hy,1.));
+  vec3 rd=reflect(vec3(0.,0.,-1.),n);
+  float fres=.05+.95*pow(1.-n.z,4.);
+  vec3 col=vec3(.004)+env(rd)*mix(.3,1.2,fres);
+  gl_FragColor=finish(col,uv); }`},
+{ id: "heat", num: "8", name: "Hot metal", note: "A torch path on hammered steel. Color follows real blackbody temperature, with temper colors left behind as it cools.",
+  params: { A: ["Heat", 0.75], B: ["Temper colors", 0.55], C: ["Hammer texture", 0.3] }, loop: 14, hue: 0,
+  src: `
+float dimples(vec2 p){ p*=14.; vec2 i=floor(p), f=fract(p); float m=1.;
+  for(int y=-1;y<=1;y++) for(int x=-1;x<=1;x++){ vec2 g=vec2(float(x),float(y)); vec2 o=vec2(hash12(i+g),hash12(i+g+9.));
+    m=min(m,length(g+o-f)); } return m; }
+void main(){ vec2 uv=screenUV(); float r=length(uv);
+  float a=TAU*uPhase; vec2 spot=.48*vec2(cos(a),sin(a));
+  float ang=atan(uv.y,uv.x); float behind=fract((a-ang)/TAU);
+  float ring=exp(-pow((r-.48)*11.,2.));
+  float flick=fbm3(vec3(uv*4.,0.)+loopOff(1.2));
+  float trail=exp(-behind*3.2)*smoothstep(0.,.05,behind);
+  float T=exp(-dot(uv-spot,uv-spot)*28.)*1.05 + ring*trail*.75;
+  T*=mix(.8,1.15,flick); T*=uA*1.15;
+  float e=.004; float d0=dimples(uv), dx=dimples(uv+vec2(e,0.)), dy=dimples(uv+vec2(0.,e));
+  vec3 n=normalize(vec3(-(dx-d0)/e*uC*.04, -(dy-d0)/e*uC*.04, 1.));
+  vec3 L=normalize(vec3(-.4,.55,.7)); float spec=pow(max(dot(reflect(-L,n),vec3(0,0,1)),0.),40.);
+  vec3 steel=vec3(.11,.115,.125)*(.6+.4*n.z)+vec3(.8,.85,.9)*spec*.5;
+  float tint=exp(-pow((r-.48)*6.,2.))*clamp(1.-behind*1.1,0.,1.)*smoothstep(0.,.05,behind)+exp(-dot(uv-spot,uv-spot)*14.);
+  float tt=clamp(tint*1.6,0.,1.);
+  vec3 temper = tt<.2?mix(steel,vec3(.85,.75,.45),tt/.2): tt<.45?mix(vec3(.85,.75,.45),vec3(.65,.38,.18),(tt-.2)/.25):
+                tt<.7?mix(vec3(.65,.38,.18),vec3(.42,.2,.5),(tt-.45)/.25): mix(vec3(.42,.2,.5),vec3(.18,.32,.72),(tt-.7)/.3);
+  vec3 col=mix(steel,temper*(.55+.45*n.z)+vec3(.6)*spec*.3,uB*smoothstep(.02,.15,tint));
+  float K=650.+5600.*clamp(T,0.,1.);
+  float glow=smoothstep(.12,.35,T)*pow(clamp(T,0.,1.3),3.)*2.2;
+  col=col*(1.-clamp(glow,0.,1.)*.9)+hueShift(blackbody(K),uHue)*glow;
+  gl_FragColor=finish(col,uv); }`},
+{ id: "schlieren", num: "9", name: "Schlieren", note: "Lab imaging that makes air visible: a heat plume rising while sound waves cross the mirror.",
+  params: { A: ["Sensitivity", 0.55], B: ["Sound waves", 0.6], C: ["Color filter", 0.0] }, loop: 10, hue: 0,
+  src: `
+float dens(vec2 p){
+  float y=p.y+1.;
+  float turb=fbmP(vec3(p.x*1.6, p.y*1.6 - uPhase*4., .5), 4.);
+  float w=.05+.22*y; float x=p.x+(turb-.5)*.55*y;
+  float plume=exp(-x*x/(w*w))*smoothstep(-.02,.15,y)*(.55+.9*turb);
+  vec2 c=vec2(-.95,.15); float r=length(p-c);
+  float waves=sin(r*38.-TAU*uPhase*5.)*exp(-r*1.1)*smoothstep(.0,.15,r)*uB*.35;
+  vec2 c2=vec2(.0,.55); float r2=length(p-c2); float shock=exp(-pow((r2-fract(uPhase*2.)*1.6)*30.,2.))*uB*.5;
+  return plume+waves+shock; }
+void main(){ vec2 uv=screenUV(); float e=.009;
+  vec2 g=vec2(dens(uv+vec2(e,0.))-dens(uv-vec2(e,0.)), dens(uv+vec2(0.,e))-dens(uv-vec2(0.,e)))/(2.*e);
+  float gain=mix(.04,.3,uA);
+  float mono=clamp(.46+g.x*gain,0.,1.);
+  vec3 mcol=vec3(mono)*vec3(1.,.98,.95);
+  float mag=clamp(length(g)*gain*1.4,0.,1.); float hue=atan(g.y,g.x)/TAU+.5;
+  vec3 ccol=clamp(abs(mod(hue*6.+vec3(0.,4.,2.),6.)-3.)-1.,0.,1.); ccol=mix(vec3(.06,.06,.08),ccol,mag);
+  vec3 col=mix(mcol,hueShift(ccol,uHue),uC);
+  col*=smoothstep(.985,.9,length(uv))*.15+.85;
+  gl_FragColor=finish(col*.95,uv); }`},
+{ id: "lensing", num: "10", name: "Gravitational lens", note: "A stark starfield bent around a black hole. The bright ring is where stars line up behind it.",
+  params: { A: ["Lens mass", 0.55], B: ["Shadow size", 0.35], C: ["Star color", 0.25] }, loop: 40, hue: 0,
+  src: `
+vec3 stars(vec2 q){ vec3 col=vec3(0.);
+  for(int L=0;L<3;L++){ float s= L==0?18.:L==1?42.:95.; vec2 g=q*s; vec2 i=floor(g), f=fract(g)-.5;
+    float h=hash12(i+float(L)*17.); if(h>.82){ vec2 o=vec2(hash12(i+3.),hash12(i+5.))-.5; float d=length(f-o*.7);
+      float b=pow((h-.82)/.18,1.8)*(L==0?3.:L==1?1.8:1.1);
+      vec3 c=mix(vec3(1.),blackbody(2800.+9000.*hash12(i+11.)),uC);
+      col+=c*b*exp(-d*d*(L==0?120.:L==1?260.:500.)); } }
+  float band=fbm3(vec3(rot(q,.5)*vec2(1.4,5.),2.)); col+=vec3(.16,.15,.14)*smoothstep(.4,.8,band)*max(1.-abs(rot(q,.5).y)*.9,0.);
+  return col; }
+void main(){ vec2 uv=screenUV(); float b=length(uv);
+  float rs=mix(.06,.3,uB); float tE=rs*mix(1.2,2.2,uA);
+  vec3 col=vec3(0.);
+  if(b>rs){ float beta=b-tE*tE/b; vec2 dir=uv/b;
+    vec2 src=rot(dir*beta, TAU*uPhase);
+    float mag=clamp(abs((b/max(abs(beta),1e-3))*(1.+tE*tE/(b*b)))*.5,0.,6.);
+    col=stars(src)*mag;
+    col+=hueShift(vec3(1.,.95,.88),uHue)*exp(-pow((b-rs*1.08)*90./rs*.05,2.))*.35;
+  }
+  gl_FragColor=finish(col,uv); }`},
+{ id: "nebula", num: "11", name: "Nebula dust", note: "Backlit gas in hydrogen red and oxygen teal, cut by dark dust lanes. Bright stars carry real diffraction spikes.",
+  params: { A: ["Brightness", 0.6], B: ["Dust", 0.6], C: ["Scale", 0.4] }, loop: 30, hue: 0,
+  src: `
+void main(){ vec2 uv=screenUV(); vec2 q=uv*mix(1.,3.,uC);
+  vec3 lo=loopOff(.35);
+  vec2 w=vec2(fbm3(vec3(q,1.)+lo), fbm3(vec3(q+5.2,2.)-lo));
+  float n=fbm3(vec3(q+2.2*w,3.)+lo*.5);
+  float m=fbm3(vec3(q*1.7-w,4.)-lo*.7);
+  vec3 ha=vec3(.95,.22,.16), o3=vec3(.12,.68,.72), s2=vec3(1.,.72,.3);
+  vec3 gas=mix(ha,o3,smoothstep(.35,.65,m)); gas=mix(gas,s2,smoothstep(.62,.8,n)*.5);
+  vec3 col=hueShift(gas,uHue)*pow(smoothstep(.3,.85,n),1.6)*mix(.6,2.4,uA);
+  float ridge=1.-abs(fbm3(vec3(q*2.3+w*1.4,5.)+lo*.8)*2.-1.);
+  col*=mix(1.,.06,smoothstep(.62,.9,ridge)*uB);
+  vec2 g=uv*22.; vec2 i=floor(g), f=fract(g)-.5; float h=hash12(i);
+  if(h>.985){ vec2 o=vec2(hash12(i+1.),hash12(i+2.))-.5; vec2 d=f-o*.5; float br=(h-.985)/.015;
+    col+=vec3(1.,.97,.92)*(exp(-dot(d,d)*900.)*2.+ (exp(-abs(d.x)*90.)*exp(-abs(d.y)*9.)+exp(-abs(d.y)*90.)*exp(-abs(d.x)*9.))*.5*br); }
+  float t=hash12(floor(uv*160.)); col+=vec3(.8)*step(.997,t)*.5;
+  gl_FragColor=finish(col,uv); }`},
+];
+
+const VERT = `attribute vec2 p; void main(){ gl_Position=vec4(p,0.,1.); }`;
+const canvas = document.getElementById("gl");
+const gl = canvas.getContext("webgl", { antialias: false, preserveDrawingBuffer: false });
+const errEl = document.getElementById("err");
+if (!gl) { errEl.hidden = false; errEl.textContent = "This browser has WebGL turned off, so the shaders cannot run here. Try Chrome or Safari on a desktop."; return; }
+const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+
+function compile(type, src) { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; }
+const programs = {};
+function program(sh) {
+  if (programs[sh.id]) return programs[sh.id];
+  const p = gl.createProgram();
+  gl.attachShader(p, compile(gl.VERTEX_SHADER, VERT));
+  gl.attachShader(p, compile(gl.FRAGMENT_SHADER, HEADER + sh.src));
+  gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+  const u = {}; ["uRes","uPhase","uA","uB","uC","uHue","uMask"].forEach(n => u[n] = gl.getUniformLocation(p, n));
+  return programs[sh.id] = { p, u, a: gl.getAttribLocation(p, "p") };
+}
+
+const state = {}; SHADERS.forEach(s => state[s.id] = { A: s.params.A[1], B: s.params.B[1], C: s.params.C[1], hue: s.hue, loop: s.loop });
+let current = SHADERS[0]; let paused = false; let mask = true; let t0 = performance.now(); let tPaused = 0;
+try { const saved = localStorage.getItem("optics-bench-current"); const f = SHADERS.find(s => s.id === saved); if (f) current = f; } catch (e) {}
+
+const list = document.getElementById("list");
+SHADERS.forEach(s => { const li = document.createElement("li"); const b = document.createElement("button"); b.type = "button"; b.id = "pick-" + s.id;
+  b.innerHTML = `<span class="num">${s.num}</span><span class="name">${s.name}</span><span class="note">${s.note}</span>`;
+  b.addEventListener("click", () => select(s)); li.appendChild(b); list.appendChild(li); });
+
+const controls = document.getElementById("controls");
+function slider(key, label, min, max, step, fmt) {
+  const wrap = document.createElement("div"); wrap.className = "ctl";
+  const id = "ctl-" + key;
+  wrap.innerHTML = `<label for="${id}">${label}</label><output id="${id}-out"></output><input type="range" id="${id}" min="${min}" max="${max}" step="${step}">`;
+  const input = wrap.querySelector("input"), out = wrap.querySelector("output");
+  const sync = () => { input.value = state[current.id][key]; out.textContent = fmt(+input.value); };
+  input.addEventListener("input", () => { state[current.id][key] = +input.value; out.textContent = fmt(+input.value); renderSettings(); });
+  controls.appendChild(wrap); return sync;
+}
+let syncs = [];
+function buildControls() {
+  controls.innerHTML = ""; const p = current.params;
+  syncs = [
+    slider("A", p.A[0], 0, 1, 0.01, v => v.toFixed(2)),
+    slider("B", p.B[0], 0, 1, 0.01, v => v.toFixed(2)),
+    slider("C", p.C[0], 0, 1, 0.01, v => v.toFixed(2)),
+    slider("hue", "Hue shift", -0.5, 0.5, 0.01, v => (v * 360).toFixed(0) + "°"),
+    slider("loop", "Loop length", 4, 60, 0.5, v => v.toFixed(1) + " s"),
+  ];
+  syncs.forEach(f => f());
+}
+const settingsEl = document.getElementById("settings");
+function renderSettings() { const s = state[current.id];
+  settingsEl.textContent = JSON.stringify({ shader: current.id, [current.params.A[0]]: s.A, [current.params.B[0]]: s.B, [current.params.C[0]]: s.C, hue: s.hue, loopSeconds: s.loop }, null, 1); }
+function select(s) {
+  current = s; try { localStorage.setItem("optics-bench-current", s.id); } catch (e) {}
+  SHADERS.forEach(x => document.getElementById("pick-" + x.id).setAttribute("aria-pressed", x === s ? "true" : "false"));
+  buildControls(); renderSettings(); errEl.hidden = true;
+  try { program(s); } catch (e) { errEl.hidden = false; errEl.textContent = "Shader failed to compile:\n" + e.message; }
+}
+
+document.getElementById("pause").addEventListener("click", e => { paused = !paused; e.currentTarget.textContent = paused ? "Play" : "Pause";
+  if (paused) tPaused = performance.now(); else t0 += performance.now() - tPaused; });
+const screen = document.getElementById("screen");
+document.getElementById("mask").addEventListener("click", e => { mask = !mask; screen.classList.toggle("square", !mask); e.currentTarget.textContent = mask ? "Show square" : "Show circle"; });
+document.getElementById("full").addEventListener("click", () => { const r = screen.requestFullscreen ? screen.requestFullscreen() : null; if (r && r.catch) r.catch(() => {}); });
+const copied = document.getElementById("copied");
+document.getElementById("copy").addEventListener("click", () => {
+  const txt = settingsEl.textContent;
+  const done = () => { copied.hidden = false; setTimeout(() => copied.hidden = true, 1500); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done).catch(() => selectText());
+  else selectText();
+  function selectText() { const r = document.createRange(); r.selectNodeContents(settingsEl); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+});
+
+const readout = document.getElementById("readout");
+function resize() { const dpr = Math.min(window.devicePixelRatio || 1, 1.5); const size = Math.min(Math.round(screen.clientWidth * dpr), 900);
+  if (canvas.width !== size) { canvas.width = size; canvas.height = size; } }
+const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+let frames = 0, lastFps = performance.now(), fps = 0;
+function frame(now) {
+  resize();
+  const s = state[current.id]; const t = ((paused ? tPaused : now) - t0) / 1000;
+  const phase = ((t % s.loop) + s.loop) % s.loop / s.loop;
+  let prog; try { prog = program(current); } catch (e) { requestAnimationFrame(frame); return; }
+  gl.viewport(0, 0, canvas.width, canvas.height); gl.useProgram(prog.p);
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.enableVertexAttribArray(prog.a); gl.vertexAttribPointer(prog.a, 2, gl.FLOAT, false, 0, 0);
+  gl.uniform2f(prog.u.uRes, canvas.width, canvas.height); gl.uniform1f(prog.u.uPhase, phase);
+  gl.uniform1f(prog.u.uA, s.A); gl.uniform1f(prog.u.uB, s.B); gl.uniform1f(prog.u.uC, s.C); gl.uniform1f(prog.u.uHue, s.hue); gl.uniform1f(prog.u.uMask, mask ? 1 : 0);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  frames++; if (now - lastFps > 500) { fps = frames * 1000 / (now - lastFps); frames = 0; lastFps = now; }
+  readout.innerHTML = `<span>${current.name}</span><span>phase <b>${phase.toFixed(3)}</b></span><span>loop <b>${s.loop.toFixed(1)} s</b></span><span><b>${fps.toFixed(0)}</b> fps</span><span>${canvas.width}px</span>`;
+  if (!reduce || !paused) requestAnimationFrame(frame);
+}
+if (reduce) paused = false;
+select(current);
+requestAnimationFrame(frame);
+})();
+</script>
