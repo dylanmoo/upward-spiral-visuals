@@ -10,6 +10,7 @@ To get everything: **Code > Download ZIP**, or `git clone`. No Git LFS needed.
 
 | Folder | What it is | Size |
 |---|---|---|
+| `portals/` | Photoreal "the circle is a portal" loops. A real halved nautilus shell with light sweeping over the nacre, with or without animated math: φ = (1+√5)/2, Fibonacci ratios converging on φ, and a log spiral r = a·e^(bθ) traced along the coil. Plus looking straight up into a swaying redwood canopy. `nautilus-math-overlay-add` is the math alone on black for Add blending. | 1080×1080 |
 | `alien-peephole/` | A friendly, hyperrealistic alien seen through a door peephole: staring and winking, dancing, floating in meditation, failing a handstand, and sneaking up to tap the glass. Most are loops; `*-free` and `*-oneshot` play once. | 1080×1080 |
 | `infinite-zoom/` | A 63-second seamless dive through eight worlds: galaxy, galaxy cluster, cell nucleus, neural forest, reef, cymatics, desert dunes, mandala, and back to the galaxy. `keyframes/` holds the world stills. | 1080×1080 |
 | `molecular-galaxies/` | Spiral galaxies rebuilt out of DNA and proteins, gently animated. Spin the layer in Resolume for rotation; on a round screen that loops forever. | 640×640 |
@@ -35,9 +36,10 @@ Black ferrofluid spiking on a magnet, as a 4-second exact loop with 4 kicks, ren
 
 ### `stills/` and `tools/`
 
-- **`stills/`:** the photoreal first frames the alien clips were animated from.
+- **`stills/`:** the photoreal first frames the alien and portal clips were animated from.
 - **`tools/`:** the scripts that generated and stitched everything.
-  - **Generation:** Higgsfield API scripts for Seedance 2.0 video and Qwen Image 3 stills. They read the API key from an environment variable.
+  - **Generation:** Higgsfield API scripts for Seedance 2.0/2.5 video and Qwen Image 3 / Grok Imagine stills. They read the API key from an environment variable.
+  - **Math overlay:** `naut_overlay.py` renders the nautilus math as transparent PNG frames (Python + Pillow). Edit the spiral fit or the text and re-render.
   - **Loops:** `loopify.sh` crossfades a loop seam, and `stitch_zoom.sh` joins the zoom dives.
   - **Shaders:** `make_isf.js` generates the ISF files, and `isf_test.js` compile-tests them.
 
@@ -49,13 +51,14 @@ Black ferrofluid spiking on a magnet, as a 4-second exact loop with 4 kicks, ren
   2. Start each dive from the actual last frame of the dive before it.
   3. Dissolve 4 frames at each join.
 - **Style references:** one style reference image works better than four. With several, the model copies them instead of following the prompt.
+- **Math that matches the footage:** a real nautilus is *not* a golden spiral (it widens about 2.8× per turn; a golden spiral widens about 6.9×). The overlay's spiral is fitted to this shell, so it sits right on the coil. Render text and math yourself instead of asking a video model for it.
 - **Loops in Blender:** spin a 6-fold-symmetric pattern 60° per loop, and the last frame matches the first.
 
 ## Credits
 
 - **Molecular look:** inspired by Drew Berry's molecular animations for WEHI. No WEHI footage is included.
 - **Galaxy layouts:** based on Hubble photographs (ESA/Hubble and NASA). The photos themselves aren't included.
-- **Tools:** clips were generated with Seedance 2.0 and Qwen Image 3 via Higgsfield, and upscaled with Topaz Video. Shaders and the Blender scene were written by hand with Claude.
+- **Tools:** clips were generated with Seedance 2.0/2.5, Qwen Image 3 and Grok Imagine via Higgsfield, and upscaled with Topaz Video. Shaders and the Blender scene were written by hand with Claude.
 
 ## License
 
