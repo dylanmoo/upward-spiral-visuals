@@ -30,6 +30,14 @@ Each shader loops exactly. It also has a "drive phase manually" input, so you ca
 - **In a browser:** open `optics-bench.html` to play with all eight.
 - **Setup steps:** see `shaders/optics-bench/README.md`.
 
+### `shaders/fx/`: ASCII and Dither effects (ISF)
+
+Two live effects to drop on any clip in Resolume:
+- **ASCII:** turns the picture into glowing text characters, with **Size** and **Glow** knobs, four character sets, source or tinted colors, and a Scramble flicker.
+- **Dither:** pixelates and dithers the picture (Bayer, noise, halftone, lines) into source colors, duotone, Game Boy, CGA or Ladybug palettes.
+
+Setup through Wire is in `shaders/fx/README.md`.
+
 ### `blender/ferrofluid/`: Blender scene
 
 Black ferrofluid spiking on a magnet, as a 4-second exact loop with 4 kicks, rendered in Cycles. Made in Blender 5.2. If your Blender version can't open the file, run `build_ferrofluid.py` to rebuild the scene. Render on a GPU at 1080×1080. The folder's README covers the settings and how to make it react to a track.
@@ -41,7 +49,7 @@ Black ferrofluid spiking on a magnet, as a 4-second exact loop with 4 kicks, ren
   - **Generation:** Higgsfield API scripts for Seedance 2.0/2.5 video and Qwen Image 3 / Grok Imagine stills. They read the API key from an environment variable.
   - **Math overlay:** `naut_overlay.py` renders the nautilus math as transparent PNG frames (Python + Pillow). Edit the spiral fit or the text and re-render.
   - **Loops:** `loopify.sh` crossfades a loop seam, and `stitch_zoom.sh` joins the zoom dives.
-  - **Shaders:** `make_isf.js` generates the ISF files, and `isf_test.js` compile-tests them.
+  - **Shaders:** `make_isf.js` generates the ISF files, and `isf_test.js` compile-tests them. `isf_fx_test.js` does the same for the effects, feeding them a test image.
 
 ## Techniques worth stealing
 
